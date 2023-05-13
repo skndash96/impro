@@ -8,7 +8,7 @@ Note: "against" reading below refers to the time taken by image crate to do the 
 
 Note: There *might* be a more efficient way in which the crate saves image as file that saves time for it.
 
-!(benchmark pic)[https://github.com/skndash96/impro/benchmark.png]
+<img alt="benchmark pic" width="200px" height="200px" src="https://raw.githubusercontent.com/skndash96/impro/main/benchmark.png">
 
 Results are present in the `tmp` directory. Images prefixed `ops` are results of the image crate.
 
