@@ -10,8 +10,42 @@ use super::{
     OpResult,
     PNG_COMPRESSION,
     PNG_FILTER,
-    CH_LEN
+    CH_LEN,
+    Kernel
 };
+
+pub enum KType {
+    Reduced,
+    Overlap
+}
+
+const SHARP_KN : Kernel = Kernel::K3([
+    0,-1,0,
+    -1,5,-1,
+    0,-1,0
+], 1);
+
+const RED_FILTER_KN : Kernel = Kernel::Kc3([
+    1,0,0,1, 1,0,0,1, 1,0,0,1,
+    1,0,0,1, 1,0,0,1, 1,0,0,1,
+    1,0,0,1, 1,0,0,1, 1,0,0,1,
+], 9);
+
+const PIXEL_KN : Kernel = Kernel::K5([
+    4,0,2,0,4,
+    0,0,0,0,0,
+    2,0,1,0,2,
+    0,0,0,0,0,
+    4,0,2,0,4
+], 25);
+
+const BLUR_KN : Kernel = Kernel::K5([
+    0,1,0,1,0,
+    1,0,3,0,1,
+    0,3,5,3,0,
+    1,0,3,0,1,
+    0,1,0,1,0
+], 25);
 
 pub fn test_blur(
     img: &OpImage
@@ -27,14 +61,9 @@ pub fn test_blur(
     let new_dim = conv(
         &mut raw,
         org_dim,
-        vec![
-            4,0,2,0,4,
-            0,0,0,0,0,
-            2,0,1,0,2,
-            0,0,0,0,0,
-            4,0,2,0,4
-        ],
-        Some(false)
+        //TODO: Can't blur high quality images, Increase Intensity
+        &BLUR_KN,
+        Some(KType::Overlap)
     ).unwrap();
     println!("saving: {:?}", start.elapsed());
 
@@ -61,7 +90,7 @@ pub fn test_blur(
     let start = Instant::now();
     image::imageops::blur(
         img,
-        1.0
+        3.0
     ).save("tmp/opsblurred.png").unwrap();
     
     println!("against: {:?}", start.elapsed());
@@ -70,42 +99,39 @@ pub fn test_blur(
 pub fn conv(
     v: &mut Vec<u8>,
     (w, h): (u32, u32),
-    k: Vec<i32>,
-    reduced: Option<bool>
+    kernel: &Kernel,
+    k_type: Option<KType>
 ) -> OpResult<(u32, u32)> {
-    let k_len : usize = k.len();
-    let k_side : usize = (k_len as f32).sqrt() as usize;
+    let (k, k_div, ch_n) = match kernel {
+        Kernel::Kc3(k,d) => (k.to_vec(), d, CH_LEN),
+        Kernel::Kc5(k,d) => (k.to_vec(), d, CH_LEN),
+        Kernel::K3(k,d) => (k.to_vec(), d, 1),
+        Kernel::K5(k,d) => (k.to_vec(), d, 1),
+    };
     
-    //length of v equals width times height
+    let k_len : usize = k.len();
+    let k_side : usize = ((k_len/ch_n) as f32).sqrt() as usize;
+    
     assert_eq!(
         v.len(), 
         CH_LEN*(w*h) as usize
     );
-    
-    // kernel is a square
     assert_eq!(
-        k_side*k_side,
+        k_side*k_side*ch_n,
         k_len
     );
     
-    let div = k
-        .clone()
-        .iter()
-        .sum::<i32>();
-    
     let (w, h) = (w as usize, h as usize);
     
-    let (crit_ci, w_ex) = {
-        let bal = w % k_side;
-        (w-bal, bal)
-    };
-    let (crit_ri, h_ex) = {
-        let bal = h % k_side;
-        (h-bal, bal)
+    let (reduced, overlap) = if let Some(val) = k_type {
+        match val {
+            KType::Overlap => (true, true),
+            KType::Reduced => (true, false)
+        }
+    } else {
+        (false, false)
     };
     
-    let reduced = reduced
-       .unwrap_or(true);
     let mut rv : Vec<u8> = if reduced {
             Vec::with_capacity(
                 (w/k_side + 1)
@@ -118,29 +144,27 @@ pub fn conv(
     
     let chr = CH_LEN*w;
     
-    for ri in (0..h).step_by(k_side) {
-        for ci in (0..w).step_by(k_side) {
+    let step = if overlap {1} else {k_side};
+    
+    let ek = k.clone();
+    let ek = ek.iter()
+        .enumerate()
+        .filter(|v| *v.1 != 0)
+        .collect::<Vec<(usize, &i32)>>();
+    let ek_len = ek.len();
+    
+    for ri in (0..h).step_by(step) {
+        for ci in (0..w).step_by(step) {
             let close = {
                 let mut vec : Vec<usize> = Vec::with_capacity(k_len);
                 
                 for y in 0..k_side {
-                    let y = if ri == crit_ri
-                        && y >= h_ex {
-                            h_ex-1
-                        } else {
-                            y
-                        };
-                    
-                    let chr_back = (ri+y)*chr;
+                    let y = (ri+y).min(h-1);
+                    let chr_back = y*chr;
                     
                     for x in 0..k_side {
-                        let x = if ci == crit_ci
-                            && x >= w_ex {
-                                w_ex-1
-                            } else {
-                                x
-                            };
-                        let chc_back = (ci+x)*CH_LEN;
+                        let x = (ci+x).min(w-1);
+                        let chc_back = x*CH_LEN;
                         
                         vec.push(chr_back + chc_back);
                     }
@@ -153,17 +177,25 @@ pub fn conv(
                 i32; CH_LEN
             ] = [0, 0, 0, 0];
             
-            for ki in 0..k_len {
-                for color_i in 0..CH_LEN {
-                    pixel[color_i] += k[ki] * v[
-                        close[ki] + color_i
-                    ] as i32;
+            if ch_n == 1 {
+                for i in 0..ek_len {
+                    let (ki, kv) = ek[i];
+                    for ch_i in 0..CH_LEN {
+                        pixel[ch_i] += kv * v[close[ki] + ch_i] as i32;
+                    }
+                }
+            } else {
+                for i in 0..ek_len {
+                    let (ki, kv) = ek[i];
+                
+                    let ch_i = ki%ch_n;
+                    pixel[ch_i] += kv * v[close[ki/ch_n] + ch_i] as i32;
                 }
             }
             
             let mut pixel = pixel
                 .iter()
-                .map(|p| (p/div) as u8)
+                .map(|p| (p/k_div) as u8)
                 .collect::<Vec<u8>>();
             
             if reduced {
@@ -181,17 +213,14 @@ pub fn conv(
     
     if reduced {
         *v = rv;
-        return if w_ex == 0 {
-            Ok((
-                (w/k_side) as u32,
-                (h/k_side) as u32
-            ))
-        } else {
-            Ok((
-                (w/k_side+1) as u32,
-                (h/k_side+1) as u32
-            ))
-        };
+        
+        let n = if w%k_side == 0 || overlap {0} else {1};
+        let d = if overlap {1} else {k_side};
+        
+        return Ok((
+            (w/d +n) as u32,
+            (h/d +n) as u32
+        ));
     } else {
         return Ok((
             w as u32,

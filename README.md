@@ -1,5 +1,5 @@
 # Impro
-Image Editor, the coolest of all.
+Image Processor and Graph tool.
 
 This repo contains rust code written for learning purposss for most common image processing tasks.
 

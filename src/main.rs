@@ -8,6 +8,13 @@ mod ops;
 use image::io::Reader;
 
 fn main() {
+    //TODO: PLOTTING
+    /* Let's do some Math */
+    
+    test_img();
+}
+
+fn test_img() {
     let img_path = "pfp.jpg";
     
     let reader = Reader::open(img_path)
@@ -22,8 +29,5 @@ fn main() {
     ops::brit::test_brighten(&img);
     ops::crop::test_crop(&mut img);
     ops::conv::test_blur(&img);
-    ops::doub::test_overlay(
-        &mut img,
-        &img2
-    );
+    ops::doub::test_overlay(&mut img, &img2);
 }
