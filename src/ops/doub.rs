@@ -33,8 +33,7 @@ pub fn test_overlay(
         dim,
         &raw2,
         dim2,
-        (-50,-50),
-        200
+        (-50,-50)
     ).unwrap();
     
     println!("saving: {:?}", start.elapsed());
@@ -70,13 +69,12 @@ pub fn test_overlay(
     println!("against: {:?}", start.elapsed());
 }
 
-fn overlay(
+pub fn overlay(
     v: &mut Vec<u8>,
     (w, h): (u32, u32),
     v2: &Vec<u8>,
     (w2, h2): (u32, u32),
     (off_x, off_y): (i32, i32),
-    a: u8
 ) -> OpResult<()> {
     assert_eq!(v.len(), (w*h) as usize*CH_LEN);
     assert_eq!(v2.len(), (w2*h2) as usize*CH_LEN);
@@ -112,13 +110,16 @@ fn overlay(
             let ch_back = chr*ri as usize + CH_LEN*ci as usize;
             let ch2_back = chr2*(ri-off_y) as usize + CH_LEN*(ci-off_x) as usize;
             
+            let a = v2[ch2_back + 3]; //RGBA
+            
             for color_i in 0..CH_LEN {
                 let i = ch_back + color_i;
                 let i2 = ch2_back + color_i;
                 
                 v[i] = (//FORMULA at EOF
                     v[i] as f32
-                    + (a as f32/255.0) * (v2[i2] as f32 - v[i] as f32)
+                    - (a as f32 /255 as f32)
+                      *(v[i] as f32 - v2[i2] as f32)
                 ) as u8;
             }
         }
@@ -127,10 +128,7 @@ fn overlay(
     Ok(())
 }
 
-/*
-# formula
-# v[i] = v[i] * (100-a)/100
-  + v[f] * a/100
-# v[i] = v[i] - v[i]*a/100 + v[f]*a/100
-# v[i] = v[i] + a/100 * (v[f] - v[i])
-*/
+// # formula
+// # i*(255-alpha)/255 + f*alpha/255
+// # i - i*alpha/255 + f*alpha/255
+// # i - alpha/255 (i - f)

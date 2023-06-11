@@ -1,17 +1,23 @@
 #![feature(iter_array_chunks)]
 #![feature(raw_slice_split)]
 #![feature(slice_ptr_get)]
+#![feature(slice_flatten)]
+#![feature(result_option_inspect)]
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
 mod ops;
+mod plot;
 
 use image::io::Reader;
 
 fn main() {
-    //TODO: PLOTTING
-    /* Let's do some Math */
-    
+    test_plot();
     test_img();
+}
+
+fn test_plot() {
+    plot::plot2d::test();
 }
 
 fn test_img() {
