@@ -12,7 +12,6 @@ mod plot;
 use image::io::Reader;
 
 fn main() {
-<<<<<<< HEAD
     test_plot();
     test_img();
 }
@@ -21,14 +20,6 @@ fn test_plot() {
     plot::plot2d::test();
 }
 
-=======
-    //TODO: PLOTTING
-    /* Let's do some Math */
-    
-    test_img();
-}
-
->>>>>>> 39c1da5fd4f4918aa19d8c7a28801a00c6cfc98e
 fn test_img() {
     let img_path = "pfp.jpg";
     
