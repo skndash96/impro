@@ -1,4 +1,5 @@
 # Impro
+## [Archived]
 Image Processor and Graph tool.
 
 This repo contains rust code written for learning purposss for most common image processing tasks.
@@ -28,7 +29,7 @@ Results are present in the `tmp` directory. Images prefixed `ops` are results of
     ```
 - Overlay two images
     ```
-    overlay(img, img2, dim, dim2, offset, alpha)
+    overlay(img, img2, dim, dim2, offset)
     ```
 
 WHERE
@@ -36,5 +37,4 @@ WHERE
 - kernel: `Vec<i32>`
 - dim, new_dim: `(u32, u32)`
 - offset: `(i32, i32)`
-- alpha: `u8`
 - minimize: `bool` (whether to reduce image size)
