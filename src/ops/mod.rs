@@ -16,7 +16,10 @@ pub enum Kernel {
     Kc5 ([i32; 25*CH_LEN], i32)
 }
 
+<<<<<<< HEAD
 //CHANGES HERE REFLECT IN PLOT
+=======
+>>>>>>> 39c1da5fd4f4918aa19d8c7a28801a00c6cfc98e
 pub const CH_LEN : usize = 4;
 pub const PNG_COMPRESSION : CompressionType = CompressionType::Fast;
 pub const PNG_FILTER : FilterType = FilterType::Adaptive;

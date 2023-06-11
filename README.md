@@ -1,5 +1,8 @@
 # Impro
+<<<<<<< HEAD
 ## [Archived]
+=======
+>>>>>>> 39c1da5fd4f4918aa19d8c7a28801a00c6cfc98e
 Image Processor and Graph tool.
 
 This repo contains rust code written for learning purposss for most common image processing tasks.
